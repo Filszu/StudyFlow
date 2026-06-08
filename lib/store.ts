@@ -30,6 +30,7 @@ export interface Task {
   nextRepetitionDays: number
   completionHistory: CompletionRecord[]
   difficulty: Difficulty | null
+  mastered: boolean
 }
 
 export interface StudyEvent {
@@ -71,6 +72,7 @@ interface AppState {
   stopTimer: () => void
   resetTimer: () => void
   finishTask: (nextRevisionDays: number, difficulty?: Difficulty | null) => void
+  finishTaskNoRepeat: (difficulty?: Difficulty | null) => void
   setUserName: (name: string) => void
   setThemeColor: (color: string) => void
   importData: (data: { categories?: Category[]; tasks?: Task[]; events?: StudyEvent[] }) => void
@@ -133,6 +135,7 @@ export const useStore = create<AppState>()(
           nextRepetitionDays: 1,
           completionHistory: [],
           difficulty: null,
+          mastered: false,
         }
         set((state) => ({ tasks: [...state.tasks, newTask] }))
         
@@ -315,6 +318,7 @@ export const useStore = create<AppState>()(
           nextRepetitionDays: nextDays,
           completionHistory: [...(task.completionHistory || []), completionRecord],
           difficulty: resolvedDifficulty,
+          mastered: false,
         }
 
         set((state) => ({
@@ -323,6 +327,44 @@ export const useStore = create<AppState>()(
           timerRunning: false,
           timerStartedAt: null,
         }))
+      },
+
+      finishTaskNoRepeat: (difficulty) => {
+        const { currentTaskId, timerStartedAt, tasks } = get()
+        if (!currentTaskId) return
+
+        const task = tasks.find((t) => t.id === currentTaskId)
+        if (!task) return
+
+        const resolvedDifficulty = difficulty ?? task.difficulty ?? null
+
+        // Calculate total time spent including current session
+        let totalTimeSpent = task.timeSpent
+        if (timerStartedAt) {
+          totalTimeSpent += Math.floor((Date.now() - timerStartedAt) / 1000)
+        }
+
+        const completionRecord: CompletionRecord = {
+          completedAt: new Date(),
+          timeSpent: totalTimeSpent,
+          nextRevisionDays: 0,
+        }
+
+        // Mark the task as completed AND mastered — no follow-up task is created
+        get().updateTask(currentTaskId, {
+          status: "completed",
+          completedAt: new Date(),
+          timeSpent: totalTimeSpent,
+          completionHistory: [...(task.completionHistory || []), completionRecord],
+          difficulty: resolvedDifficulty,
+          mastered: true,
+        })
+
+        set({
+          currentTaskId: null,
+          timerRunning: false,
+          timerStartedAt: null,
+        })
       },
 
       getTasksForDate: (date) => {
