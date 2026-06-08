@@ -1027,7 +1027,7 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <div className="grid grid-cols-7 gap-2 min-w-[640px] sm:min-w-0">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 min-w-0">
           {weekDays.map((day) => {
             const dayTasks = tasks.filter(
               (task) => isSameDay(new Date(task.dueDate), day)
@@ -1336,15 +1336,15 @@ function FullCalendarView({ onClose }: { onClose: () => void }) {
         {/* Calendar Grid - desktop, or mobile when full view is toggled on */}
         {showGrid && (
         <div className="flex-1 overflow-auto p-2 sm:p-4">
-          <div className="min-w-[560px] sm:min-w-0">
-            <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="min-w-0">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1 mb-2">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                 <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-2">
                   {day}
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1">
               {calendarDays.map((day) => {
                 const dayTasks = tasks.filter((task) => isSameDay(new Date(task.dueDate), day))
                 const dayEvents = events.filter((event) => isSameDay(new Date(event.date), day))
