@@ -2131,6 +2131,12 @@ function AppInner() {
               <p className="hidden md:block text-sm text-muted-foreground">
                 {format(new Date(), "EEEE, MMMM d, yyyy")}
               </p>
+              <Link href="/stats">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <BarChart3 className="w-5 h-5" />
+                  <span className="sr-only">Statistics</span>
+                </Button>
+              </Link>
               <Link href="/profile">
                 <Button variant="ghost" size="icon" className="h-10 w-10">
                   <User className="w-5 h-5" />
