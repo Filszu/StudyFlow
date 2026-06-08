@@ -42,6 +42,7 @@ import {
   User,
   Coffee,
   Edit3,
+  Award,
 } from "lucide-react"
 
 // Difficulty configuration: colors + emoji for easy / mid / tough
@@ -223,7 +224,9 @@ function DraggableCalendarTask({
       }}
     >
       <div className="flex items-center gap-1 pr-5">
-        {task.status === "completed" ? (
+        {task.mastered ? (
+          <Award className={cn("text-green-600 shrink-0", large ? "w-4 h-4" : "w-3 h-3")} />
+        ) : task.status === "completed" ? (
           <CheckCircle2 className={cn("text-green-500 shrink-0", large ? "w-4 h-4" : "w-3 h-3")} />
         ) : difficultyConfig ? (
           <span className={cn("shrink-0 leading-none", large ? "text-base" : "text-xs")} aria-hidden>
@@ -384,6 +387,12 @@ function TaskDetailDialog({ task, open, onOpenChange }: { task: Task | null; ope
                   >
                     <span className="mr-1" aria-hidden>{DIFFICULTY_CONFIG[task.difficulty].emoji}</span>
                     {DIFFICULTY_CONFIG[task.difficulty].label}
+                  </Badge>
+                )}
+                {task.mastered && (
+                  <Badge className="bg-green-500/15 text-green-600 hover:bg-green-500/15">
+                    <Award className="w-3 h-3 mr-1" />
+                    Mastered
                   </Badge>
                 )}
               </div>
@@ -654,6 +663,7 @@ function CurrentTaskPanel() {
     stopTimer,
     resetTimer,
     finishTask,
+    finishTaskNoRepeat,
     setCurrentTask,
   } = useStore()
   
@@ -702,6 +712,18 @@ function CurrentTaskPanel() {
   const handleSelectRevision = (days: number) => {
     if (pendingFinish) {
       finishTask(days, selectedDifficulty)
+      setPendingFinish(false)
+    }
+    setShowCongrats(false)
+    setElapsedTime(0)
+    setCustomDays("")
+    setNeedsDifficulty(false)
+    setSelectedDifficulty(null)
+  }
+
+  const handleFinishNoRepeat = () => {
+    if (pendingFinish) {
+      finishTaskNoRepeat(selectedDifficulty)
       setPendingFinish(false)
     }
     setShowCongrats(false)
@@ -911,6 +933,18 @@ function CurrentTaskPanel() {
                       Set custom days
                     </Button>
                   </div>
+
+                  {/* Totally finished - no more repetitions */}
+                  <div className="mt-6 pt-4 border-t border-border/50">
+                    <Button
+                      variant="ghost"
+                      onClick={handleFinishNoRepeat}
+                      className="w-full text-green-600 hover:text-green-700 hover:bg-green-500/10"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      I&apos;ve mastered this — don&apos;t repeat
+                    </Button>
+                  </div>
                 </>
               )}
             </div>
@@ -932,6 +966,7 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [selectedEvent, setSelectedEvent] = useState<string>("")
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({})
 
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -992,12 +1027,15 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
         </div>
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <div className="grid grid-cols-7 gap-2 min-w-[640px] sm:min-w-0">
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 min-w-0">
           {weekDays.map((day) => {
             const dayTasks = tasks.filter(
               (task) => isSameDay(new Date(task.dueDate), day)
             )
             const isToday = isSameDay(day, new Date())
+            const dayKey = day.toISOString()
+            const isExpanded = expandedDays[dayKey]
+            const visibleTasks = isExpanded ? dayTasks : dayTasks.slice(0, 3)
 
             return (
               <div
@@ -1028,7 +1066,7 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
                   </span>
                 </div>
                 <div className="space-y-1">
-                  {dayTasks.slice(0, 3).map((task) => {
+                  {visibleTasks.map((task) => {
                     const cat = categories.find((c) => c.id === task.categoryId)
                     const diff = task.difficulty ? DIFFICULTY_CONFIG[task.difficulty] : null
                     const accent = diff?.color ?? cat?.color
@@ -1038,14 +1076,17 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
                         onClick={() => setSelectedTask(task)}
                         className={cn(
                           "group relative text-xs p-1.5 rounded-lg bg-card truncate cursor-pointer hover:bg-card/80",
-                          task.status === "completed" && "opacity-60"
+                          task.status === "completed" && "opacity-60",
+                          task.mastered && "bg-green-500/10"
                         )}
                         style={{
                           borderLeft: accent ? `3px solid ${accent}` : "3px solid transparent",
                         }}
                       >
                         <div className="flex items-center gap-1">
-                          {task.status === "completed" ? (
+                          {task.mastered ? (
+                            <Award className="w-3 h-3 text-green-600 shrink-0" />
+                          ) : task.status === "completed" ? (
                             <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
                           ) : diff ? (
                             <span className="text-xs shrink-0 leading-none" aria-hidden>{diff.emoji}</span>
@@ -1069,9 +1110,14 @@ function WeekView({ onOpenCalendar }: { onOpenCalendar: () => void }) {
                     )
                   })}
                   {dayTasks.length > 3 && (
-                    <span className="text-xs text-muted-foreground">
-                      +{dayTasks.length - 3} more
-                    </span>
+                    <button
+                      onClick={() =>
+                        setExpandedDays((prev) => ({ ...prev, [dayKey]: !prev[dayKey] }))
+                      }
+                      className="text-xs text-primary font-medium hover:underline cursor-pointer"
+                    >
+                      {isExpanded ? "Show less" : `+${dayTasks.length - 3} more`}
+                    </button>
                   )}
                 </div>
                 <Button
@@ -1290,15 +1336,15 @@ function FullCalendarView({ onClose }: { onClose: () => void }) {
         {/* Calendar Grid - desktop, or mobile when full view is toggled on */}
         {showGrid && (
         <div className="flex-1 overflow-auto p-2 sm:p-4">
-          <div className="min-w-[560px] sm:min-w-0">
-            <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="min-w-0">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1 mb-2">
               {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
                 <div key={day} className="text-center text-xs sm:text-sm font-medium text-muted-foreground py-2">
                   {day}
                 </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-1">
               {calendarDays.map((day) => {
                 const dayTasks = tasks.filter((task) => isSameDay(new Date(task.dueDate), day))
                 const dayEvents = events.filter((event) => isSameDay(new Date(event.date), day))
@@ -1529,6 +1575,8 @@ function CalendarDayDropZone({
   const { setNodeRef, isOver } = useDroppable({
     id: `calendar-day-${day.toISOString()}`,
   })
+  const [isExpanded, setIsExpanded] = useState(false)
+  const visibleTasks = isExpanded ? dayTasks : dayTasks.slice(0, 4)
 
   return (
     <div
@@ -1567,7 +1615,7 @@ function CalendarDayDropZone({
           <DraggableEvent key={event.id} event={event} />
         ))}
         {/* Tasks */}
-        {dayTasks.slice(0, 4).map((task) => (
+        {visibleTasks.map((task) => (
           <DraggableCalendarTask
             key={task.id}
             task={task}
@@ -1577,7 +1625,12 @@ function CalendarDayDropZone({
           />
         ))}
         {dayTasks.length > 4 && (
-          <span className="text-xs text-muted-foreground">+{dayTasks.length - 4} more</span>
+          <button
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="text-xs text-primary font-medium hover:underline cursor-pointer"
+          >
+            {isExpanded ? "Show less" : `+${dayTasks.length - 4} more`}
+          </button>
         )}
       </div>
     </div>
@@ -1705,7 +1758,9 @@ function EventsPanel() {
           </div>
         ) : (
           events.map((event) => {
-            const eventTasks = tasks.filter((t) => t.eventId === event.id)
+            const allEventTasks = tasks.filter((t) => t.eventId === event.id)
+            const eventTasks = allEventTasks.filter((t) => t.status !== "completed")
+            const completedCount = allEventTasks.length - eventTasks.length
             const category = categories.find((c) => c.id === event.categoryId)
 
             return (
@@ -1724,6 +1779,9 @@ function EventsPanel() {
                       <h4 className="font-semibold">{event.title}</h4>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {format(new Date(event.date), "EEEE, MMM d")}
+                        {completedCount > 0 && (
+                          <span className="ml-2 text-green-600">· {completedCount} done</span>
+                        )}
                       </p>
                     </div>
                     <button
@@ -1741,6 +1799,12 @@ function EventsPanel() {
                   </div>
                 </div>
                 <div className="p-3 space-y-2">
+                  {eventTasks.length === 0 && allEventTasks.length > 0 && (
+                    <div className="flex items-center gap-2 text-xs text-green-600 py-1.5 px-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>All tasks completed!</span>
+                    </div>
+                  )}
                   {eventTasks.map((task) => (
                     <div
                       key={task.id}
@@ -2067,6 +2131,12 @@ function AppInner() {
               <p className="hidden md:block text-sm text-muted-foreground">
                 {format(new Date(), "EEEE, MMMM d, yyyy")}
               </p>
+              <Link href="/stats">
+                <Button variant="ghost" size="icon" className="h-10 w-10">
+                  <BarChart3 className="w-5 h-5" />
+                  <span className="sr-only">Statistics</span>
+                </Button>
+              </Link>
               <Link href="/profile">
                 <Button variant="ghost" size="icon" className="h-10 w-10">
                   <User className="w-5 h-5" />
