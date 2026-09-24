@@ -16,6 +16,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 type PopupRecord = {
   joined?: boolean
   email?: string
+  signedUpAt?: string
   remindUntil?: number
   offered?: boolean
 }
@@ -68,7 +69,15 @@ function shouldOpen(record: PopupRecord) {
   return true
 }
 
-export function CommunityPopup({ offerId = 0 }: { offerId?: number }) {
+export function CommunityPopup({
+  offerId = 0,
+  skipEligibility = false,
+  showRemind = true,
+}: {
+  offerId?: number
+  skipEligibility?: boolean
+  showRemind?: boolean
+}) {
   const [open, setOpen] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [email, setEmail] = useState("")
@@ -80,16 +89,23 @@ export function CommunityPopup({ offerId = 0 }: { offerId?: number }) {
   useEffect(() => {
     if (!offerId) return
     const record = readRecord()
-    if (!shouldOpen(record)) return
-    if (sessionStorage.getItem(SESSION_KEY)) return
+    if (!skipEligibility) {
+      if (!shouldOpen(record)) return
+      if (sessionStorage.getItem(SESSION_KEY)) return
+    }
 
     const appear = window.setTimeout(() => {
-      writeRecord({ ...record, offered: true, remindUntil: undefined })
+      if (!skipEligibility) {
+        writeRecord({ ...record, offered: true, remindUntil: undefined })
+      }
+      setJoined(!!record.joined)
+      setEmail(record.email ?? "")
+      setError("")
       setLeaving(false)
       setOpen(true)
-    }, 160)
+    }, skipEligibility ? 0 : 160)
     return () => window.clearTimeout(appear)
-  }, [offerId])
+  }, [offerId, skipEligibility])
 
   useEffect(() => {
     if (!open) return
@@ -125,8 +141,12 @@ export function CommunityPopup({ offerId = 0 }: { offerId?: number }) {
   }
 
   const dismissForSession = () => {
+    if (joined && skipEligibility) {
+      hide()
+      return
+    }
     if (joined) return
-    sessionStorage.setItem(SESSION_KEY, "1")
+    if (!skipEligibility) sessionStorage.setItem(SESSION_KEY, "1")
     hide()
   }
 
@@ -146,18 +166,20 @@ export function CommunityPopup({ offerId = 0 }: { offerId?: number }) {
     }
 
     setError("")
+    const signedUpAt = new Date().toISOString()
 
-    try {
-      await fetch("/api/community", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value }),
-      })
-    } catch {
-      // Keep the local join even if the network request fails.
+    const response = await fetch("/api/community", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: value, signedUpAt }),
+    })
+
+    if (!response.ok) {
+      setError("Could not send your signup. Please try again.")
+      throw new Error("signup-failed")
     }
 
-    writeRecord({ joined: true, email: value })
+    writeRecord({ joined: true, email: value, signedUpAt })
   }
 
   const handleJoined = () => {
@@ -265,16 +287,18 @@ export function CommunityPopup({ offerId = 0 }: { offerId?: number }) {
                 </StatefulButton>
               </form>
 
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={remindInThreeDays}
-                className="community-perk mt-2 h-11 w-full rounded-xl text-muted-foreground hover:text-foreground"
-                style={{ animationDelay: "150ms" }}
-              >
-                <Bell className="h-4 w-4" />
-                Remind me in 3 days
-              </Button>
+              {showRemind && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={remindInThreeDays}
+                  className="community-perk mt-2 h-11 w-full rounded-xl text-muted-foreground hover:text-foreground"
+                  style={{ animationDelay: "150ms" }}
+                >
+                  <Bell className="h-4 w-4" />
+                  Remind me in 3 days
+                </Button>
+              )}
 
               <ul className="mt-5 space-y-2.5">
                 {PERKS.map((perk, index) => {

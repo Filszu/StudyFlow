@@ -4,12 +4,13 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { format } from "date-fns"
-import { ArrowLeft, Download, Upload, Edit3, Check, Coffee, ExternalLink } from "lucide-react"
+import { ArrowLeft, Download, Upload, Edit3, Check, Coffee, ExternalLink, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useStore } from "@/lib/store"
+import { CommunityPopup } from "@/components/community-popup"
 
 const THEME_COLORS = [
   { name: "coral", label: "Coral", primary: "oklch(0.72 0.12 25)", accent: "oklch(0.85 0.1 170)" },
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const { userName, setUserName, themeColor, setThemeColor, categories, tasks, events } = useStore()
   const [editName, setEditName] = useState(userName)
   const [isEditingName, setIsEditingName] = useState(false)
+  const [newsletterOfferId, setNewsletterOfferId] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -172,6 +174,22 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Newsletter</CardTitle>
+              <CardDescription>Join the beta community and get the fastest updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                className="w-full justify-start gap-3"
+                onClick={() => setNewsletterOfferId((id) => id + 1)}
+              >
+                <Mail className="w-4 h-4" />
+                Sign up to newsletter
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Data management */}
           <Card>
             <CardHeader>
@@ -247,6 +265,12 @@ export default function ProfilePage() {
           </Card>
         </div>
       </main>
+
+      <CommunityPopup
+        offerId={newsletterOfferId}
+        skipEligibility
+        showRemind={false}
+      />
     </div>
   )
 }
