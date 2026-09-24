@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { ConfirmProvider, useConfirm } from "@/components/confirm-dialog"
 import { AllTasksCelebration } from "@/components/celebration"
+import { CommunityPopup } from "@/components/community-popup"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -2061,7 +2062,9 @@ function AppInner() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [showFullCalendar, setShowFullCalendar] = useState(false)
   const [showAllDone, setShowAllDone] = useState(false)
+  const [communityOfferId, setCommunityOfferId] = useState(0)
   const allDoneShownRef = useRef(false)
+  const MIN_COMMUNITY_TASKS = 4
 
   // Today's tasks: celebrate when every one of them is completed
   const todayTasks = tasks.filter((task) => isSameDay(new Date(task.dueDate), new Date()))
@@ -2181,9 +2184,16 @@ function AppInner() {
       {/* Celebration when every task for today is complete */}
       <AllTasksCelebration
         open={showAllDone}
-        onClose={() => setShowAllDone(false)}
+        onClose={() => {
+          setShowAllDone(false)
+          if (todayTasks.length >= MIN_COMMUNITY_TASKS) {
+            setCommunityOfferId((id) => id + 1)
+          }
+        }}
         completedCount={completedToday}
       />
+
+      <CommunityPopup offerId={communityOfferId} />
     </DndContext>
   )
 }

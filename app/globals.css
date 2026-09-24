@@ -191,3 +191,103 @@
 .animate-float-up {
   animation: float-up 0.4s ease-out forwards;
 }
+
+@keyframes community-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes community-card {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes community-card-leave {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+
+@keyframes community-icon-in {
+  0% {
+    transform: scale(0.84);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes community-orb {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(12px, -10px) scale(1.08);
+  }
+}
+
+@keyframes community-cta-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--primary) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 8px 24px -6px color-mix(in oklab, var(--primary) 45%, transparent);
+  }
+}
+
+.community-perk {
+  animation: community-rise 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.community-card-enter {
+  animation: community-card 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.community-card-leave {
+  animation: community-card-leave 0.2s ease-in forwards;
+}
+
+.community-icon-in {
+  animation: community-icon-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.community-orb {
+  animation: community-orb 7s ease-in-out infinite;
+}
+
+.community-orb-delayed {
+  animation: community-orb 9s ease-in-out 1.2s infinite;
+}
+
+.community-cta {
+  animation: community-cta-glow 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .community-perk,
+  .community-card-enter,
+  .community-card-leave,
+  .community-icon-in,
+  .community-orb,
+  .community-orb-delayed,
+  .community-cta {
+    animation: none;
+  }
+}
